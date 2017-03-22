@@ -1,21 +1,22 @@
 <?php
 
-class Chat
+class Model
 {
     public $memcache = null;
 
-    public function __construct($memcache)
+    public function __construct()
     {
-        $this->memcache = $memcache;
+        $this->memcache = new Memcache();
+        $this->memcache->connect('localhost', 11211) or die("Could not connect to chat.");
     }
 
     public function addMessage($username, $message)
     {
-        $messageId = $this->memcache->increment('total', 1, 0); // No funciona el inicializar.
+        $messageId = $this->memcache->increment('totalMessages', 1); // No funciona el inicializar.
 
         if (!$messageId) {
-            $messageId = 0;
-            $this->memcache->set('total', 1);
+            $messageId = 1;
+            $this->memcache->set('totalMessages', 1);
         }
 
         $this->memcache->set('message:' . $messageId, $message);
@@ -36,7 +37,7 @@ class Chat
     {
         $messages = array();
 
-        $totalMessages = $this->memcache->get('total');
+        $totalMessages = $this->memcache->get('totalMessages');
         for ($i = 0; $i <= $totalMessages; $i++) {
             $messages[] = array(
                 'username' => $this->memcache->get('message:' . $i . ':user'),
@@ -46,17 +47,4 @@ class Chat
 
         return $messages;
     }
-}
-
-$memcache = new Memcache();
-$memcache->connect('localhost', 11211) or die("Could not connect to chat.");
-
-$chat = new Chat($memcache);
-$chat->addMessage('Mar', 'Mensaje 1');
-$chat->addMessage('Tony', 'Mensaje 2');
-$chat->addMessage('Felix', 'Mensaje 3');
-
-$messages = $chat->getMessages();
-foreach ($messages as $message) {
-    echo $message['username'] . " dice: " . $message['message'] . "<br />";
 }
